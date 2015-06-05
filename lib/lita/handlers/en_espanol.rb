@@ -13,7 +13,16 @@ module Lita
       def translate(response)
         return unless response.message.source.room == config.source_room
         translator = MicrosoftTranslator::Client.new(config.ms_client_id, config.ms_client_secret)
-        translated = translator.translate(response.message.body, "en", config.target_language, "text/plain")
+        # Assign the message to a temporary variable
+        message = response.message.body
+        # Find all emoji
+        emoji = message.scan(/\:\w*\:/)
+        # Replace emoji with untranslatable placeholders
+        emoji.each_with_index{|match, index| message.sub!(match, "[[#{index}]]") }
+        # Translate the message
+        translated = translator.translate(message, "en", config.target_language, "text/plain")
+        # Put Emoji Back
+        emoji.each_with_index{|match, index| translated.sub!("[[#{index}]]", match) }
         post_message_to_alternate_room(translated, response.message.user)
       end
 
